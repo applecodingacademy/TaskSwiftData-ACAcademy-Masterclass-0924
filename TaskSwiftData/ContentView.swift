@@ -9,53 +9,52 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @Environment(\.modelContext) private var context
+    @Query private var tareas: [Tareas]
+    @State private var showAdd = false
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+        NavigationStack {
+            VStack {
+                if tareas.isEmpty {
+                    ContentUnavailableView("No hay tareas",
+                                           systemImage: "list.bullet.clipboard",
+                                           description: Text("Aún no existen tareas en la app. Por favor, pulse el + arriba a la derecha para crear una nueva tarea."))
+                    Spacer()
+                } else {
+                    main
                 }
-                .onDelete(perform: deleteItems)
             }
+            .navigationTitle("Tareas")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showAdd.toggle()
+                    } label: {
+                        Image(systemName: "plus")
                     }
                 }
             }
-        } detail: {
-            Text("Select an item")
+        }
+        .fullScreenCover(isPresented: $showAdd) {
+            NewTareaView()
         }
     }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    
+    var main: some View {
+        List {
+            ForEach(tareas) { tarea in
+                TareaRow(tarea: tarea)
+            }
+            .onDelete { index in
+                for i in index {
+                    context.delete(tareas[i])
+                }
             }
         }
     }
 }
 
-#Preview {
+#Preview(traits: .sampleData) {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
